@@ -29,8 +29,6 @@ func NewModel() Model {
 
 	fp := filepicker.New()
 	fp.AllowedTypes = []string{".zip"}
-	wd, _ := os.Getwd()
-	fp.CurrentDirectory = wd + "/output/"
 
 	return Model{
 		loading:    true,
@@ -55,8 +53,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	// TODO: find a better type than bool
 	case int64:
-		m.artifactId = msg
 		m.loading = false
+		m.artifactId = msg
 		wd, _ := os.Getwd()
 		artifactId := strconv.FormatInt(m.artifactId, 10)
 		wd = wd + "/output/" + artifactId
