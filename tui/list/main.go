@@ -4,13 +4,10 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
-	"github.com/real-erik/platui/process"
 )
 
 type Model struct {
 	title string
-	items []process.Result
 	list  list.Model
 
 	height int
@@ -22,7 +19,6 @@ func NewModel(title string) Model {
 
 	return Model{
 		title: title,
-		items: []process.Result{},
 		list:  list.New(listItems, list.NewDefaultDelegate(), 0, 0),
 	}
 }
@@ -34,8 +30,13 @@ const (
 	Back
 )
 
+type Item struct {
+	Title string
+	Description string
+}
+
 type Msg struct {
-	Item      process.Result
+	Item      int
 	Direction Direction
 }
 
@@ -62,13 +63,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case []process.Result:
-		m.items = msg
-
+	case []Item:
 		items := []list.Item{}
-		for i, resultItem := range m.items {
+		for i, resultItem := range msg {
 			newItem := item{
-				title: resultItem.Name,
+				title: resultItem.Title,
+				desc: resultItem.Description,
 				id:    i,
 			}
 			items = append(items, newItem)
@@ -100,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				selected := m.list.SelectedItem().(item)
 				cmd := func() tea.Msg {
 					return Msg{
-						Item:      m.items[selected.id],
+						Item:      selected.id,
 						Direction: Forward,
 					}
 				}

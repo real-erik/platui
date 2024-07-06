@@ -12,6 +12,7 @@ import (
 type Model struct {
 	loading  bool
 	list     list.Model
+	items    []process.Result
 	Selected process.Result
 }
 
@@ -31,9 +32,20 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case []process.Result:
 		m.loading = false
+
+		m.items = msg
+		items := []list.Item{}
+		for _, resultItem := range msg {
+			newItem := list.Item{
+				Title: resultItem.Name,
+			}
+			items = append(items, newItem)
+		}
+		m.list, _ = m.list.Update(items)
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -46,10 +58,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			listMsg := listMsg.(list.Msg)
 			switch listMsg.Direction {
 			case list.Forward:
-				m.Selected = listMsg.Item
+				m.Selected = m.items[listMsg.Item]
 				cmd = func() tea.Msg {
 					return ForwardMsg{
-						Payload: listMsg.Item,
+						Payload: m.Selected,
 					}
 				}
 			}

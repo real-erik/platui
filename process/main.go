@@ -22,8 +22,11 @@ type Process struct {
 }
 
 type Result struct {
-	ID   int64
-	Name string
+	ID          int64
+	Name        string
+	Status      string
+	Title       string
+	Conclusion  string
 }
 
 func NewProcess(token string) Process {
@@ -32,11 +35,6 @@ func NewProcess(token string) Process {
 		client: github.NewClient(nil).WithAuthToken(token),
 		ctx:    context.Background(),
 	}
-}
-
-func main() {
-	p := NewProcess(os.Getenv("GITHUB_TOKEN"))
-	p.GetOrganizations()
 }
 
 func (p *Process) GetOrganizations() ([]Result, error) {
@@ -59,7 +57,6 @@ func (p *Process) GetOrganizations() ([]Result, error) {
 }
 
 func (p *Process) GetRepositories(organization string) ([]Result, error) {
-	fmt.Println(organization)
 	var githubRepositories []*github.Repository
 	page := 0
 	for {
@@ -98,8 +95,11 @@ func (p *Process) GetWorkflowRuns(organization string, repository string) ([]Res
 	var runs []Result
 	for _, run := range githubRuns.WorkflowRuns {
 		runs = append(runs, Result{
-			ID:   run.GetID(),
-			Name: run.GetName(),
+			ID:         run.GetID(),
+			Name:       run.GetName(),
+			Status:     run.GetStatus(),
+			Title:      run.GetDisplayTitle(),
+			Conclusion: run.GetConclusion(),
 		})
 	}
 
@@ -228,6 +228,6 @@ func (p *Process) Run(filepath string) error {
 		return err
 	}
 
-	fmt.Println("Command finished")
+	// fmt.Println("Command finished")
 	return nil
 }

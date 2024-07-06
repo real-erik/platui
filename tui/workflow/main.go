@@ -12,11 +12,12 @@ import (
 type Model struct {
 	loading bool
 	list    list.Model
+	items   []process.Result
 }
 
 func NewModel() Model {
 	return Model{
-		list: list.NewModel("Workflows"),
+		list:    list.NewModel("Workflows"),
 		loading: true,
 	}
 }
@@ -32,9 +33,20 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case []process.Result:
 		m.loading = false
+
+		m.items = msg
+		items := []list.Item{}
+		for _, resultItem := range msg {
+			newItem := list.Item{
+				Title: resultItem.Name,
+			}
+			items = append(items, newItem)
+		}
+		m.list, _ = m.list.Update(items)
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -49,7 +61,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			case list.Forward:
 				cmd = func() tea.Msg {
 					return ForwardMsg{
-						Payload: listMsg.Item,
+						Payload: m.items[listMsg.Item],
 					}
 				}
 			case list.Back:
