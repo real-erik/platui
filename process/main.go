@@ -97,7 +97,7 @@ func (p *Process) GetWorkflowRuns(organization string, repository string) ([]Res
 		runs = append(runs, Result{
 			ID:         run.GetID(),
 			Name:       run.GetName(),
-			Status:     run.GetStatus(),
+			// Status:     run.GetStatus(),
 			Title:      run.GetDisplayTitle(),
 			Conclusion: run.GetConclusion(),
 		})

@@ -32,6 +32,18 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
+func conclusionToColor(conclusion string) string {
+	switch conclusion {
+	case "success":
+		return "🟢"
+	case "failure":
+		return "🔴"
+	case "cancelled":
+		return "⚪"
+	}
+	return ""
+}
+
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case []process.Result:
@@ -40,8 +52,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.items = msg
 		items := []list.Item{}
 		for _, resultItem := range msg {
+			conclusionColor := conclusionToColor(resultItem.Conclusion)
 			newItem := list.Item{
-				Title: resultItem.Name,
+				Title:       conclusionColor + " " + resultItem.Title,
+				Description: resultItem.Name,
 			}
 			items = append(items, newItem)
 		}
