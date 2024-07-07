@@ -4,6 +4,8 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
+	"github.com/google/go-github/v62/github"
+	"github.com/pkg/browser"
 	"io"
 	"log"
 	"net/http"
@@ -11,8 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/google/go-github/v62/github"
 )
 
 type Process struct {
@@ -22,11 +22,11 @@ type Process struct {
 }
 
 type Result struct {
-	ID          int64
-	Name        string
-	Status      string
-	Title       string
-	Conclusion  string
+	ID         int64
+	Name       string
+	Status     string
+	Title      string
+	Conclusion string
 }
 
 func NewProcess(token string) Process {
@@ -97,7 +97,6 @@ func (p *Process) GetWorkflowRuns(organization string, repository string) ([]Res
 		runs = append(runs, Result{
 			ID:         run.GetID(),
 			Name:       run.GetName(),
-			// Status:     run.GetStatus(),
 			Title:      run.GetDisplayTitle(),
 			Conclusion: run.GetConclusion(),
 		})
@@ -213,21 +212,31 @@ func unzip(artifactId int64) {
 }
 
 func (p *Process) Run(filepath string) error {
-	cmd := exec.Command("playwright", "show-trace", filepath)
 
-	err := cmd.Start()
-	if err != nil {
-		// TODO: try pnpm exec playwright
-		log.Fatal(err)
-		return err
+	if strings.Contains(filepath, "webm") {
+		browser.OpenFile(filepath)
+	}
+	if strings.Contains(filepath, "png") {
+		browser.OpenFile(filepath)
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Fatal(err)
-		return err
+	if strings.Contains(filepath, "zip") {
+		cmd := exec.Command("playwright", "show-trace", filepath)
+
+		err := cmd.Start()
+		if err != nil {
+			// TODO: try pnpm exec playwright
+			log.Fatal(err)
+			return err
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+
 	}
 
-	// fmt.Println("Command finished")
 	return nil
 }

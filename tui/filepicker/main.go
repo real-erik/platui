@@ -28,7 +28,7 @@ type SelectedMsg struct {
 func NewModel() Model {
 
 	fp := filepicker.New()
-	fp.AllowedTypes = []string{".zip"}
+	fp.AllowedTypes = []string{".zip", ".webm", ".png"}
 
 	return Model{
 		loading:    true,
