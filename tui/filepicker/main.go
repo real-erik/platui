@@ -17,12 +17,6 @@ type Model struct {
 	quitting     bool
 	err          error
 	loading      bool
-	artifactId   int64
-}
-
-type BackMsg struct{}
-type SelectedMsg struct {
-	Payload string
 }
 
 func NewModel() Model {
@@ -36,12 +30,24 @@ func NewModel() Model {
 	}
 }
 
+type BackMsg struct{}
+
+type SelectedMsg struct {
+	Payload string
+}
+
 type clearErrorMsg struct{}
 
 func clearErrorAfter(t time.Duration) tea.Cmd {
 	return tea.Tick(t, func(_ time.Time) tea.Msg {
 		return clearErrorMsg{}
 	})
+}
+
+func getCurrentDirectory(artifactId int64) string {
+	wd, _ := os.Getwd()
+	wd = wd + "/output/" + strconv.FormatInt(artifactId, 10)
+	return wd
 }
 
 func (m Model) Init() tea.Cmd {
@@ -51,13 +57,9 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	// TODO: find a better type than bool
 	case int64:
 		m.loading = false
-		m.artifactId = msg
-		wd, _ := os.Getwd()
-		artifactId := strconv.FormatInt(m.artifactId, 10)
-		wd = wd + "/output/" + artifactId
+		wd := getCurrentDirectory(msg)
 		m.filepicker.CurrentDirectory = wd
 		cmd := m.Init()
 		return m, cmd
