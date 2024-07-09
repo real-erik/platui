@@ -40,7 +40,12 @@ func conclusionToColor(conclusion string) string {
 		return "🔴"
 	case "cancelled":
 		return "⚪"
+	case "skipped":
+		return "🔳"
+	case "in_progress":
+		return "🟡"
 	}
+
 	return ""
 }
 
