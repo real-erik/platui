@@ -3,7 +3,7 @@ package list
 import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/real-erik/platui/tui/styles"
 )
 
 type Model struct {
@@ -42,11 +42,10 @@ type Msg struct {
 
 // FIXME: why doesn't this work?
 func (m Model) setListSize() {
-	h, v := docStyle.GetFrameSize()
+	h, v := styles.DocStyle.GetFrameSize()
 	m.list.SetSize(m.width-h, m.height-v)
 }
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 type item struct {
 	title, desc string
@@ -79,7 +78,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		// FIXME: why doesn't this work?
 		// m.setListSize()
-		h, v := docStyle.GetFrameSize()
+		h, v := styles.DocStyle.GetFrameSize()
 		m.list.SetSize(m.width-h, m.height-v)
 		return m, nil
 
@@ -89,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		// FIXME: why doesn't this work?
 		// m.setListSize()
-		h, v := docStyle.GetFrameSize()
+		h, v := styles.DocStyle.GetFrameSize()
 		m.list.SetSize(m.width-h, m.height-v)
 		return m, nil
 
@@ -125,5 +124,5 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 
-	return docStyle.Render(m.list.View())
+	return styles.DocStyle.Render(m.list.View())
 }

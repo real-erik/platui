@@ -76,8 +76,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case organization.ForwardMsg:
 		m.mode = Repository
+		startLoading := m.repository.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
-		return m, cmd
+		return m, tea.Batch(startLoading, cmd)
 
 	case repository.ForwardMsg:
 		m.mode = Workflow
