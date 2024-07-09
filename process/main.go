@@ -58,7 +58,7 @@ func (p *Process) GetOrganizations() ([]Result, error) {
 
 func (p *Process) GetRepositories(organization string) ([]Result, error) {
 	var githubRepositories []*github.Repository
-	page := 0
+	page := 1
 	for {
 		r, _, err := p.client.Repositories.ListByOrg(p.ctx, organization, &github.RepositoryListByOrgOptions{Sort: "full_name", ListOptions: github.ListOptions{Page: page, PerPage: 100}})
 		if err != nil {
