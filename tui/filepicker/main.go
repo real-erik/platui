@@ -68,6 +68,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc":
 			m.loading = true
+			m.selectedFile = ""
 			cmd := func() tea.Msg {
 				return BackMsg{}
 			}
