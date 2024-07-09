@@ -3,7 +3,6 @@ package repository
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
 	"github.com/real-erik/platui/process"
 	"github.com/real-erik/platui/tui/list"
 	"github.com/real-erik/platui/tui/spinner"

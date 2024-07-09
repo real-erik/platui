@@ -1,17 +1,18 @@
 package workflow
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/real-erik/platui/process"
-
 	"github.com/real-erik/platui/tui/list"
+	"github.com/real-erik/platui/tui/spinner"
+	"github.com/real-erik/platui/tui/styles"
 )
 
 type Model struct {
 	loading bool
 	list    list.Model
+	spinner spinner.Model
 	items   []process.Result
 }
 
@@ -19,6 +20,7 @@ func NewModel() Model {
 	return Model{
 		list:    list.NewModel("Workflows"),
 		loading: true,
+		spinner: spinner.NewModel(),
 	}
 }
 
@@ -51,6 +53,10 @@ func conclusionToColor(conclusion string) string {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.list, _ = m.list.Update(msg)
+		return m, nil
+
 	case []process.Result:
 		m.loading = false
 
@@ -69,6 +75,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
+
+	if m.loading {
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+
 	m.list, cmd = m.list.Update(msg)
 
 	if cmd != nil {
@@ -104,7 +116,8 @@ type item struct {
 
 func (m Model) View() string {
 	if m.loading {
-		return fmt.Sprintf("Loading workflows...")
+		return styles.DocStyle.Render(m.spinner.View() + " Loading Workflows ")
 	}
+
 	return lipgloss.NewStyle().Render(m.list.View())
 }
