@@ -10,12 +10,14 @@ import (
 	"github.com/real-erik/platui/tui/filepicker"
 	"github.com/real-erik/platui/tui/organization"
 	"github.com/real-erik/platui/tui/repository"
+	"github.com/real-erik/platui/tui/spinner"
 	"github.com/real-erik/platui/tui/workflow"
 )
 
 type model struct {
 	mode         mode
 	process      process.Process
+	spinner      spinner.Model
 	organization organization.Model
 	repository   repository.Model
 	workflow     workflow.Model
@@ -26,7 +28,8 @@ type model struct {
 func NewModel(process process.Process) model {
 	return model{
 		process:      process,
-		mode:         Organization,
+		mode:         Loading,
+		spinner:      spinner.NewModel(),
 		organization: organization.NewModel(),
 		repository:   repository.NewModel(),
 		workflow:     workflow.NewModel(),
@@ -38,7 +41,8 @@ func NewModel(process process.Process) model {
 type mode int
 
 const (
-	Organization mode = iota
+	Loading mode = iota
+	Organization
 	Repository
 	Workflow
 	Artifact
@@ -46,15 +50,25 @@ const (
 )
 
 func (m model) Init() tea.Cmd {
+	startLoading := m.spinner.Init()
 	cmd := m.getOrganizationsCmd()
-	return cmd
+	return tea.Batch(startLoading, cmd)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		if m.mode == Loading {
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+
+		return m, nil
+
 	case organizationDataMsg:
+		m.mode = Organization
 		m.organization, _ = m.organization.Update(msg.Payload)
 		return m, nil
 
@@ -128,9 +142,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.workflow, _ = m.workflow.Update(msg)
 		m.artifact, _ = m.artifact.Update(msg)
 		m.filepicker, _ = m.filepicker.Update(msg)
+
 		return m, nil
 	}
 
+	// TODO: why can't I place this as default?
 	switch m.mode {
 	case Organization:
 		m.organization, cmd = m.organization.Update(msg)
@@ -143,11 +159,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case Filepicker:
 		m.filepicker, cmd = m.filepicker.Update(msg)
 	}
+
 	return m, cmd
+
 }
 
 func (m model) View() string {
 	switch m.mode {
+	case Loading:
+		return m.spinner.View()
 	case Organization:
 		return m.organization.View()
 	case Repository:

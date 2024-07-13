@@ -1,7 +1,6 @@
 package organization
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -10,7 +9,6 @@ import (
 )
 
 type Model struct {
-	loading  bool
 	list     list.Model
 	items    []process.Result
 	Selected process.Result
@@ -18,8 +16,7 @@ type Model struct {
 
 func NewModel() Model {
 	return Model{
-		loading: true,
-		list:    list.NewModel("Organizations"),
+		list: list.NewModel("Organizations"),
 	}
 }
 
@@ -33,9 +30,11 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case []process.Result:
-		m.loading = false
+	case tea.WindowSizeMsg:
+		m.list, _ = m.list.Update(msg)
+		return m, nil
 
+	case []process.Result:
 		m.items = msg
 		items := []list.Item{}
 		for _, resultItem := range msg {
@@ -79,9 +78,5 @@ type item struct {
 }
 
 func (m Model) View() string {
-	if m.loading {
-		return fmt.Sprintf("Loading Organizations...")
-	}
-
 	return lipgloss.NewStyle().Render(m.list.View())
 }

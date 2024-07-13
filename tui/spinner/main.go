@@ -21,6 +21,8 @@ func NewModel() Model {
 
 }
 
+type TickMsg spinner.TickMsg
+
 func (m Model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
