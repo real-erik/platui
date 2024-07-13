@@ -12,10 +12,11 @@ import (
 )
 
 type Model struct {
-	filepicker   filepicker.Model
-	selectedFile string
-	quitting     bool
-	err          error
+	filepicker         filepicker.Model
+	selectedFile       string
+	quitting           bool
+	err                error
+	clicksAwayFromRoot int
 }
 
 func NewModel() Model {
@@ -24,7 +25,8 @@ func NewModel() Model {
 	fp.AllowedTypes = []string{".zip", ".webm", ".png"}
 
 	return Model{
-		filepicker: fp,
+		filepicker:         fp,
+		clicksAwayFromRoot: 0,
 	}
 }
 
@@ -63,22 +65,31 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "enter":
+			// HACK: add to clicks and remove later if it was a file select
+			m.clicksAwayFromRoot++
 		case "esc":
-			m.selectedFile = ""
-			cmd := func() tea.Msg {
-				return BackMsg{}
+			if m.clicksAwayFromRoot == 0 {
+				m.selectedFile = ""
+				cmd := func() tea.Msg {
+					return BackMsg{}
+				}
+				return m, cmd
 			}
-			return m, cmd
+
+			m.clicksAwayFromRoot--
 		}
 
 	case clearErrorMsg:
 		m.err = nil
+
 	}
 
 	var cmd tea.Cmd
 	m.filepicker, cmd = m.filepicker.Update(msg)
 
 	if didSelect, path := m.filepicker.DidSelectDisabledFile(msg); didSelect {
+		m.clicksAwayFromRoot--
 		m.err = errors.New(path + " is not valid.")
 		m.selectedFile = ""
 		return m, tea.Batch(cmd, clearErrorAfter(2*time.Second))
@@ -86,6 +97,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
 
+		m.clicksAwayFromRoot--
 		m.selectedFile = path
 		cmd = func() tea.Msg {
 			return SelectedMsg{
