@@ -11,30 +11,33 @@ import (
 	"github.com/real-erik/platui/tui/organization"
 	"github.com/real-erik/platui/tui/repository"
 	"github.com/real-erik/platui/tui/spinner"
+	"github.com/real-erik/platui/tui/styles"
 	"github.com/real-erik/platui/tui/workflow"
 )
 
 type model struct {
-	mode         mode
-	process      process.Process
-	spinner      spinner.Model
-	organization organization.Model
-	repository   repository.Model
-	workflow     workflow.Model
-	artifact     artifact.Model
-	filepicker   filepicker.Model
+	mode           mode
+	loadingMessage string
+	process        process.Process
+	spinner        spinner.Model
+	organization   organization.Model
+	repository     repository.Model
+	workflow       workflow.Model
+	artifact       artifact.Model
+	filepicker     filepicker.Model
 }
 
 func NewModel(process process.Process) model {
 	return model{
-		process:      process,
-		mode:         Loading,
-		spinner:      spinner.NewModel(),
-		organization: organization.NewModel(),
-		repository:   repository.NewModel(),
-		workflow:     workflow.NewModel(),
-		artifact:     artifact.NewModel(),
-		filepicker:   filepicker.NewModel(),
+		process:        process,
+		mode:           Loading,
+		loadingMessage: "Loading organizations",
+		spinner:        spinner.NewModel(),
+		organization:   organization.NewModel(),
+		repository:     repository.NewModel(),
+		workflow:       workflow.NewModel(),
+		artifact:       artifact.NewModel(),
+		filepicker:     filepicker.NewModel(),
 	}
 }
 
@@ -86,12 +89,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case organization.ForwardMsg:
 		m.mode = Loading
+		m.loadingMessage = "Loading repositories"
 		startLoading := m.spinner.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
 		return m, tea.Batch(startLoading, cmd)
 
 	case repository.ForwardMsg:
 		m.mode = Loading
+		m.loadingMessage = "Loading workflows"
 		cmd = m.getWorkflowsCmd(msg.Payload.Name)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -102,6 +107,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case workflow.ForwardMsg:
 		m.mode = Loading
+		m.loadingMessage = "Loading artifacts"
 		cmd = m.getArtifactsCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -112,6 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case artifact.ForwardMsg:
 		m.mode = Loading
+		m.loadingMessage = "Downloading files"
 		cmd = m.downloadArtifactCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -167,7 +174,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	switch m.mode {
 	case Loading:
-		return m.spinner.View()
+		return styles.DocStyle.Render(m.spinner.View() + " " + m.loadingMessage + "...")
 	case Organization:
 		return m.organization.View()
 	case Repository:
