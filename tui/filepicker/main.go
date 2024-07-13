@@ -16,7 +16,6 @@ type Model struct {
 	selectedFile string
 	quitting     bool
 	err          error
-	loading      bool
 }
 
 func NewModel() Model {
@@ -25,7 +24,6 @@ func NewModel() Model {
 	fp.AllowedTypes = []string{".zip", ".webm", ".png"}
 
 	return Model{
-		loading:    true,
 		filepicker: fp,
 	}
 }
@@ -58,7 +56,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case int64:
-		m.loading = false
 		wd := getCurrentDirectory(msg)
 		m.filepicker.CurrentDirectory = wd
 		cmd := m.Init()
@@ -67,7 +64,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.loading = true
 			m.selectedFile = ""
 			cmd := func() tea.Msg {
 				return BackMsg{}
@@ -103,9 +99,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if m.loading {
-		return "Loading..."
-	}
 	if m.quitting {
 		return ""
 	}

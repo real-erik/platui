@@ -59,45 +59,41 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case spinner.TickMsg:
-		if m.mode == Loading {
-			m.spinner, cmd = m.spinner.Update(msg)
-			return m, cmd
-		}
-
-		return m, nil
-
 	case organizationDataMsg:
 		m.mode = Organization
 		m.organization, _ = m.organization.Update(msg.Payload)
 		return m, nil
 
 	case repositoryDataMsg:
+		m.mode = Repository
 		m.repository, _ = m.repository.Update(msg.Payload)
 		return m, nil
 
 	case workflowDataMsg:
+		m.mode = Workflow
 		m.workflow, _ = m.workflow.Update(msg.Payload)
 		return m, nil
 
 	case artifactDataMsg:
+		m.mode = Artifact
 		m.artifact, _ = m.artifact.Update(msg.Payload)
 		return m, nil
 
 	case filepickerDataMsg:
+		m.mode = Filepicker
 		m.filepicker, cmd = m.filepicker.Update(msg.Payload)
 		return m, cmd
 
 	case organization.ForwardMsg:
-		m.mode = Repository
+		m.mode = Loading
+		startLoading := m.spinner.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
-		startLoading := m.repository.Init()
 		return m, tea.Batch(startLoading, cmd)
 
 	case repository.ForwardMsg:
-		m.mode = Workflow
+		m.mode = Loading
 		cmd = m.getWorkflowsCmd(msg.Payload.Name)
-		startLoading := m.workflow.Init()
+		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
 
 	case repository.BackMsg:
@@ -105,18 +101,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case workflow.ForwardMsg:
-		m.mode = Artifact
+		m.mode = Loading
 		cmd = m.getArtifactsCmd(msg.Payload.ID)
-		return m, cmd
+		startLoading := m.spinner.Init()
+		return m, tea.Batch(startLoading, cmd)
 
 	case workflow.BackMsg:
 		m.mode = Repository
 		return m, nil
 
 	case artifact.ForwardMsg:
-		m.mode = Filepicker
+		m.mode = Loading
 		cmd = m.downloadArtifactCmd(msg.Payload.ID)
-		return m, cmd
+		startLoading := m.spinner.Init()
+		return m, tea.Batch(startLoading, cmd)
 
 	case artifact.BackMsg:
 		m.mode = Workflow
@@ -148,6 +146,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// TODO: why can't I place this as default?
 	switch m.mode {
+	case Loading:
+		m.spinner, cmd = m.spinner.Update(msg)
 	case Organization:
 		m.organization, cmd = m.organization.Update(msg)
 	case Repository:

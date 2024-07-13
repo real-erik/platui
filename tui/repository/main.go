@@ -5,23 +5,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/real-erik/platui/process"
 	"github.com/real-erik/platui/tui/list"
-	"github.com/real-erik/platui/tui/spinner"
-	"github.com/real-erik/platui/tui/styles"
 )
 
 type Model struct {
-	loading  bool
 	list     list.Model
-	spinner  spinner.Model
 	items    []process.Result
 	Selected process.Result
 }
 
 func NewModel() Model {
 	return Model{
-		loading: true,
 		list:    list.NewModel("Repositories"),
-		spinner: spinner.NewModel(),
 	}
 }
 
@@ -32,7 +26,7 @@ type ForwardMsg struct {
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.spinner.Init()
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -42,7 +36,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case []process.Result:
-		m.loading = false
 
 		m.items = msg
 		items := []list.Item{}
@@ -57,12 +50,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-
-	if m.loading {
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	}
-
 	m.list, cmd = m.list.Update(msg)
 
 	if cmd != nil {
@@ -79,7 +66,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 					}
 				}
 			case list.Back:
-				m.loading = true
 				cmd = func() tea.Msg {
 					return BackMsg{}
 				}
@@ -98,9 +84,5 @@ type item struct {
 }
 
 func (m Model) View() string {
-	if m.loading {
-		return styles.DocStyle.Render(m.spinner.View() + " Loading Repositories ")
-	}
-
 	return lipgloss.NewStyle().Render(m.list.View())
 }

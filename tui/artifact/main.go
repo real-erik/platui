@@ -1,7 +1,6 @@
 package artifact
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/real-erik/platui/process"
@@ -10,7 +9,6 @@ import (
 )
 
 type Model struct {
-	loading bool
 	list    list.Model
 	items   []process.Result
 }
@@ -18,7 +16,6 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		list:    list.NewModel("Artifacts"),
-		loading: true,
 	}
 }
 
@@ -35,8 +32,6 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case []process.Result:
-		m.loading = false
-
 		m.items = msg
 		items := []list.Item{}
 		for _, resultItem := range msg {
@@ -65,7 +60,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 					}
 				}
 			case list.Back:
-				m.loading = true
 				cmd = func() tea.Msg {
 					return BackMsg{}
 				}
@@ -84,8 +78,5 @@ type item struct {
 }
 
 func (m Model) View() string {
-	if m.loading {
-		return fmt.Sprintf("Loading...")
-	}
 	return lipgloss.NewStyle().Render(m.list.View())
 }
