@@ -23,8 +23,12 @@ func (s modeStack) GoForward(v mode) modeStack {
 }
 
 func (s modeStack) GoBack() modeStack {
-	l := len(s)
-	return s[:l-1]
+	s = s[:len(s)-1]
+	if s[len(s)-1] == Loading {
+		s = s[:len(s)-1]
+	}
+
+	return s
 }
 
 func (s modeStack) GetCurrent() mode {
@@ -33,7 +37,12 @@ func (s modeStack) GetCurrent() mode {
 
 func (m model) GoForward(mode mode) model {
 	m.mode = m.mode.GoForward(mode)
-	m.loadingMessage = ""
+	return m
+}
+
+func (m model) GoForwardLoading(loadingMessage string) model {
+	m.mode = m.mode.GoForward(Loading)
+	m.loadingMessage = loadingMessage
 	return m
 }
 
@@ -67,7 +76,8 @@ func NewModel(process process.Process) model {
 type mode int
 
 const (
-	Environment mode = iota
+	Loading mode = iota
+	Environment
 	Organization
 	Repository
 	Workflow
@@ -111,7 +121,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case environment.ForwardMsg:
 		switch msg.Payload.Name {
 		case "Github":
-			m.loadingMessage = "Loading organizations"
+			m = m.GoForwardLoading("Loading organizations")
 			startLoading := m.spinner.Init()
 			cmd := m.getOrganizationsCmd()
 			return m, tea.Batch(startLoading, cmd)
@@ -123,7 +133,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case organization.ForwardMsg:
-		m.loadingMessage = "Loading repositories"
+		m = m.GoForwardLoading("Loading repositories")
 		startLoading := m.spinner.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
 		return m, tea.Batch(startLoading, cmd)
@@ -133,7 +143,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case repository.ForwardMsg:
-		m.loadingMessage = "Loading workflows"
+		m = m.GoForwardLoading("Loading workflows")
 		cmd = m.getWorkflowsCmd(msg.Payload.Name)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -143,7 +153,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case workflow.ForwardMsg:
-		m.loadingMessage = "Loading artifacts"
+		m = m.GoForwardLoading("Loading artifacts")
 		cmd = m.getArtifactsCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -153,7 +163,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case artifact.ForwardMsg:
-		m.loadingMessage = "Downloading files"
+		m = m.GoForwardLoading("Downloading files")
 		cmd = m.downloadArtifactCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
@@ -188,11 +198,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// TODO: why can't I place this as default?
-	if m.loadingMessage != "" {
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	}
 	switch m.mode.GetCurrent() {
+	case Loading:
+		m.spinner, cmd = m.spinner.Update(msg)
 	case Environment:
 		m.environment, cmd = m.environment.Update(msg)
 	case Organization:
@@ -212,11 +220,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if m.loadingMessage != "" {
-		return styles.DocStyle.Render(m.spinner.View() + " " + m.loadingMessage + "...")
-	}
-
 	switch m.mode.GetCurrent() {
+	case Loading:
+		return styles.DocStyle.Render(m.spinner.View() + " " + m.loadingMessage + "...")
 	case Environment:
 		return m.environment.View()
 	case Organization:
