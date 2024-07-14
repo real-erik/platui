@@ -18,8 +18,19 @@ func NewModel() Model {
 		{Name: "Local"},
 	}
 
+	listItems := []list.Item{}
+	for _, resultItem := range items {
+		newItem := list.Item{
+			Title: resultItem.Name,
+		}
+		listItems = append(listItems, newItem)
+	}
+
+	list := list.NewModel("Environment")
+	list, _ = list.Update(listItems)
+
 	return Model{
-		list:  list.NewModel("Environment"),
+		list:  list,
 		items: items,
 	}
 }
@@ -28,30 +39,14 @@ type ForwardMsg struct {
 	Payload process.Result
 }
 
-type EnvironmentDataMsg struct{}
-
 func (m Model) Init() tea.Cmd {
-	return func() tea.Msg {
-		return EnvironmentDataMsg{}
-	}
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list, _ = m.list.Update(msg)
-		return m, nil
-
-	case EnvironmentDataMsg:
-		items := []list.Item{}
-		for _, resultItem := range m.items {
-			newItem := list.Item{
-				Title: resultItem.Name,
-			}
-			items = append(items, newItem)
-		}
-
-		m.list, _ = m.list.Update(items)
 		return m, nil
 	}
 

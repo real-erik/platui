@@ -16,9 +16,29 @@ import (
 	"github.com/real-erik/platui/tui/workflow"
 )
 
+type modeStack []mode
+
+func (s modeStack) GoForward(v mode) modeStack {
+	return append(s, v)
+}
+
+func (s modeStack) GoBack() modeStack {
+	l := len(s)
+	return s[:l-1]
+}
+
+func (s modeStack) GetCurrent() mode {
+	return s[len(s)-1]
+}
+
+func (m model) GoForward(mode mode) model {
+	m.mode = m.mode.GoForward(mode)
+	m.loadingMessage = ""
+	return m
+}
+
 type model struct {
-	mode           mode
-	previousMode   mode
+	mode           modeStack
 	loadingMessage string
 	process        process.Process
 	spinner        spinner.Model
@@ -33,6 +53,7 @@ type model struct {
 func NewModel(process process.Process) model {
 	return model{
 		process:      process,
+		mode:         modeStack{Environment},
 		spinner:      spinner.NewModel(),
 		environment:  environment.NewModel(),
 		organization: organization.NewModel(),
@@ -46,8 +67,7 @@ func NewModel(process process.Process) model {
 type mode int
 
 const (
-	Loading mode = iota
-	Environment
+	Environment mode = iota
 	Organization
 	Repository
 	Workflow
@@ -55,108 +75,91 @@ const (
 	Filepicker
 )
 
-func (m model) SetMode(mode mode) model {
-	m.previousMode = m.mode
-	m.mode = mode
-
-	return m
-}
-
 func (m model) Init() tea.Cmd {
-	return m.environment.Init()
+	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case environment.EnvironmentDataMsg:
-		m.mode = Environment
-		m.environment, _ = m.environment.Update(msg)
-		return m, nil
-
 	case organizationDataMsg:
-		m.mode = Organization
+		m = m.GoForward(Organization)
 		m.organization, _ = m.organization.Update(msg.Payload)
 		return m, nil
 
 	case repositoryDataMsg:
-		m.mode = Repository
+		m = m.GoForward(Repository)
 		m.repository, _ = m.repository.Update(msg.Payload)
 		return m, nil
 
 	case workflowDataMsg:
-		m.mode = Workflow
+		m = m.GoForward(Workflow)
 		m.workflow, _ = m.workflow.Update(msg.Payload)
 		return m, nil
 
 	case artifactDataMsg:
-		m.mode = Artifact
+		m = m.GoForward(Artifact)
 		m.artifact, _ = m.artifact.Update(msg.Payload)
 		return m, nil
 
 	case filepickerDataMsg:
-		m.mode = Filepicker
+		m = m.GoForward(Filepicker)
 		m.filepicker, cmd = m.filepicker.Update(filepicker.ArtifactMsg(msg.Payload))
 		return m, cmd
 
 	case environment.ForwardMsg:
 		switch msg.Payload.Name {
 		case "Github":
-			m.mode = Loading
 			m.loadingMessage = "Loading organizations"
 			startLoading := m.spinner.Init()
 			cmd := m.getOrganizationsCmd()
 			return m, tea.Batch(startLoading, cmd)
 
 		case "Local":
-			m = m.SetMode(Filepicker)
+			m = m.GoForward(Filepicker)
 			m.filepicker, cmd = m.filepicker.Update(filepicker.LocalMsg{})
 			return m, cmd
 		}
 
 	case organization.ForwardMsg:
-		m.mode = Loading
 		m.loadingMessage = "Loading repositories"
 		startLoading := m.spinner.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
 		return m, tea.Batch(startLoading, cmd)
 
 	case organization.BackMsg:
-		m.mode = Environment
+		m.mode = m.mode.GoBack()
 		return m, nil
 
 	case repository.ForwardMsg:
-		m.mode = Loading
 		m.loadingMessage = "Loading workflows"
 		cmd = m.getWorkflowsCmd(msg.Payload.Name)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
 
 	case repository.BackMsg:
-		m.mode = Organization
+		m.mode = m.mode.GoBack()
 		return m, nil
 
 	case workflow.ForwardMsg:
-		m.mode = Loading
 		m.loadingMessage = "Loading artifacts"
 		cmd = m.getArtifactsCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
 
 	case workflow.BackMsg:
-		m.mode = Repository
+		m.mode = m.mode.GoBack()
 		return m, nil
 
 	case artifact.ForwardMsg:
-		m.mode = Loading
 		m.loadingMessage = "Downloading files"
 		cmd = m.downloadArtifactCmd(msg.Payload.ID)
 		startLoading := m.spinner.Init()
 		return m, tea.Batch(startLoading, cmd)
 
 	case artifact.BackMsg:
-		m.mode = Workflow
+		m.mode = m.mode.GoBack()
 		return m, nil
 
 	case filepicker.SelectedMsg:
@@ -165,7 +168,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case filepicker.BackMsg:
-		m.mode = m.previousMode
+		m.mode = m.mode.GoBack()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -185,9 +188,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// TODO: why can't I place this as default?
-	switch m.mode {
-	case Loading:
+	if m.loadingMessage != "" {
 		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+	switch m.mode.GetCurrent() {
 	case Environment:
 		m.environment, cmd = m.environment.Update(msg)
 	case Organization:
@@ -207,9 +212,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	switch m.mode {
-	case Loading:
+	if m.loadingMessage != "" {
 		return styles.DocStyle.Render(m.spinner.View() + " " + m.loadingMessage + "...")
+	}
+
+	switch m.mode.GetCurrent() {
 	case Environment:
 		return m.environment.View()
 	case Organization:
