@@ -15,7 +15,7 @@ type Model struct {
 
 func NewModel() Model {
 	return Model{
-		list:    list.NewModel("Repositories"),
+		list: list.NewModel("Repositories"),
 	}
 }
 
@@ -39,7 +39,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		m.items = msg
 		items := []list.Item{}
-		for _, resultItem := range msg {
+		for _, resultItem := range m.items {
 			newItem := list.Item{
 				Title: resultItem.Name,
 			}
@@ -65,6 +65,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 						Payload: m.Selected,
 					}
 				}
+
 			case list.Back:
 				cmd = func() tea.Msg {
 					return BackMsg{}

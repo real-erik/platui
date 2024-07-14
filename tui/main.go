@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/real-erik/platui/process"
 	"github.com/real-erik/platui/tui/artifact"
+	"github.com/real-erik/platui/tui/environment"
 	"github.com/real-erik/platui/tui/filepicker"
 	"github.com/real-erik/platui/tui/organization"
 	"github.com/real-erik/platui/tui/repository"
@@ -17,9 +18,11 @@ import (
 
 type model struct {
 	mode           mode
+	previousMode   mode
 	loadingMessage string
 	process        process.Process
 	spinner        spinner.Model
+	environment    environment.Model
 	organization   organization.Model
 	repository     repository.Model
 	workflow       workflow.Model
@@ -29,15 +32,14 @@ type model struct {
 
 func NewModel(process process.Process) model {
 	return model{
-		process:        process,
-		mode:           Loading,
-		loadingMessage: "Loading organizations",
-		spinner:        spinner.NewModel(),
-		organization:   organization.NewModel(),
-		repository:     repository.NewModel(),
-		workflow:       workflow.NewModel(),
-		artifact:       artifact.NewModel(),
-		filepicker:     filepicker.NewModel(),
+		process:      process,
+		spinner:      spinner.NewModel(),
+		environment:  environment.NewModel(),
+		organization: organization.NewModel(),
+		repository:   repository.NewModel(),
+		workflow:     workflow.NewModel(),
+		artifact:     artifact.NewModel(),
+		filepicker:   filepicker.NewModel(),
 	}
 }
 
@@ -45,6 +47,7 @@ type mode int
 
 const (
 	Loading mode = iota
+	Environment
 	Organization
 	Repository
 	Workflow
@@ -52,16 +55,26 @@ const (
 	Filepicker
 )
 
+func (m model) SetMode(mode mode) model {
+	m.previousMode = m.mode
+	m.mode = mode
+
+	return m
+}
+
 func (m model) Init() tea.Cmd {
-	startLoading := m.spinner.Init()
-	cmd := m.getOrganizationsCmd()
-	return tea.Batch(startLoading, cmd)
+	return m.environment.Init()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case environment.EnvironmentDataMsg:
+		m.mode = Environment
+		m.environment, _ = m.environment.Update(msg)
+		return m, nil
+
 	case organizationDataMsg:
 		m.mode = Organization
 		m.organization, _ = m.organization.Update(msg.Payload)
@@ -84,8 +97,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case filepickerDataMsg:
 		m.mode = Filepicker
-		m.filepicker, cmd = m.filepicker.Update(msg.Payload)
+		m.filepicker, cmd = m.filepicker.Update(filepicker.ArtifactMsg(msg.Payload))
 		return m, cmd
+
+	case environment.ForwardMsg:
+		switch msg.Payload.Name {
+		case "Github":
+			m.mode = Loading
+			m.loadingMessage = "Loading organizations"
+			startLoading := m.spinner.Init()
+			cmd := m.getOrganizationsCmd()
+			return m, tea.Batch(startLoading, cmd)
+
+		case "Local":
+			m = m.SetMode(Filepicker)
+			m.filepicker, cmd = m.filepicker.Update(filepicker.LocalMsg{})
+			return m, cmd
+		}
 
 	case organization.ForwardMsg:
 		m.mode = Loading
@@ -93,6 +121,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		startLoading := m.spinner.Init()
 		cmd = m.getRepositoriesCmd(msg.Payload.Name)
 		return m, tea.Batch(startLoading, cmd)
+
+	case organization.BackMsg:
+		m.mode = Environment
+		return m, nil
 
 	case repository.ForwardMsg:
 		m.mode = Loading
@@ -133,7 +165,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case filepicker.BackMsg:
-		m.mode = Artifact
+		m.mode = m.previousMode
 		return m, nil
 
 	case tea.KeyMsg:
@@ -142,6 +174,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
+		m.environment, _ = m.environment.Update(msg)
 		m.organization, _ = m.organization.Update(msg)
 		m.repository, _ = m.repository.Update(msg)
 		m.workflow, _ = m.workflow.Update(msg)
@@ -155,6 +188,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case Loading:
 		m.spinner, cmd = m.spinner.Update(msg)
+	case Environment:
+		m.environment, cmd = m.environment.Update(msg)
 	case Organization:
 		m.organization, cmd = m.organization.Update(msg)
 	case Repository:
@@ -175,6 +210,8 @@ func (m model) View() string {
 	switch m.mode {
 	case Loading:
 		return styles.DocStyle.Render(m.spinner.View() + " " + m.loadingMessage + "...")
+	case Environment:
+		return m.environment.View()
 	case Organization:
 		return m.organization.View()
 	case Repository:

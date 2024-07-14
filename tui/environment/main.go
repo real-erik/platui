@@ -1,33 +1,39 @@
-package organization
+package environment
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
 	"github.com/real-erik/platui/process"
 	"github.com/real-erik/platui/tui/list"
 )
 
 type Model struct {
-	list     list.Model
-	items    []process.Result
-	Selected process.Result
+	list  list.Model
+	items []process.Result
 }
 
 func NewModel() Model {
+	items := []process.Result{
+		{Name: "Github"},
+		{Name: "Local"},
+	}
+
 	return Model{
-		list: list.NewModel("Organizations"),
+		list:  list.NewModel("Environment"),
+		items: items,
 	}
 }
-
-type BackMsg struct{}
 
 type ForwardMsg struct {
 	Payload process.Result
 }
 
+type EnvironmentDataMsg struct{}
+
 func (m Model) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg {
+		return EnvironmentDataMsg{}
+	}
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -36,15 +42,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.list, _ = m.list.Update(msg)
 		return m, nil
 
-	case []process.Result:
-		m.items = msg
+	case EnvironmentDataMsg:
 		items := []list.Item{}
-		for _, resultItem := range msg {
+		for _, resultItem := range m.items {
 			newItem := list.Item{
 				Title: resultItem.Name,
 			}
 			items = append(items, newItem)
 		}
+
 		m.list, _ = m.list.Update(items)
 		return m, nil
 	}
@@ -59,16 +65,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			listMsg := listMsg.(list.Msg)
 			switch listMsg.Direction {
 			case list.Forward:
-				m.Selected = m.items[listMsg.Item]
 				cmd = func() tea.Msg {
 					return ForwardMsg{
-						Payload: m.Selected,
+						Payload: m.items[listMsg.Item],
 					}
-				}
-
-			case list.Back:
-				cmd = func() tea.Msg {
-					return BackMsg{}
 				}
 			}
 		default:
@@ -78,10 +78,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	return m, cmd
 
-}
-
-type item struct {
-	title, desc string
 }
 
 func (m Model) View() string {

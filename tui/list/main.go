@@ -31,7 +31,7 @@ const (
 )
 
 type Item struct {
-	Title string
+	Title       string
 	Description string
 }
 
@@ -45,7 +45,6 @@ func (m Model) setListSize() {
 	h, v := styles.DocStyle.GetFrameSize()
 	m.list.SetSize(m.width-h, m.height-v)
 }
-
 
 type item struct {
 	title, desc string
@@ -67,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		for i, resultItem := range msg {
 			newItem := item{
 				title: resultItem.Title,
-				desc: resultItem.Description,
+				desc:  resultItem.Description,
 				id:    i,
 			}
 			items = append(items, newItem)

@@ -34,7 +34,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case []process.Result:
 		m.items = msg
 		items := []list.Item{}
-		for _, resultItem := range msg {
+		for _, resultItem := range m.items {
 			newItem := list.Item{
 				Title: resultItem.Name,
 			}

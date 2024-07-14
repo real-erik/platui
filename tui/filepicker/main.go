@@ -38,6 +38,10 @@ type SelectedMsg struct {
 
 type clearErrorMsg struct{}
 
+type ArtifactMsg int64
+
+type LocalMsg struct {}
+
 func clearErrorAfter(t time.Duration) tea.Cmd {
 	return tea.Tick(t, func(_ time.Time) tea.Msg {
 		return clearErrorMsg{}
@@ -57,8 +61,14 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	case int64:
-		wd := getCurrentDirectory(msg)
+	case ArtifactMsg:
+		wd := getCurrentDirectory(int64(msg))
+		m.filepicker.CurrentDirectory = wd
+		cmd := m.Init()
+		return m, cmd
+
+	case LocalMsg:
+		wd, _ := os.UserHomeDir()
 		m.filepicker.CurrentDirectory = wd
 		cmd := m.Init()
 		return m, cmd
